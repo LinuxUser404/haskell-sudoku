@@ -17,50 +17,50 @@ library
   exposed-modules:     Sudoku
   -- other-modules:       Module
   build-depends:       base >= 4 && < 5
---  ghc-options:         -Wall
+  ghc-options:         -Wall
   default-language:    Haskell2010
 
 executable sudoku-solver
   hs-source-dirs:      src
   main-is:             sudoku-solver.hs
-  -- ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  other-modules:       Sudoku
   build-depends:       base
-                     , Sudoku
   default-language:    Haskell2010
 
 test-suite test1
   type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
+  hs-source-dirs:      src test
   main-is:             "Test 1 - Solved puzzle.hs"
+  other-modules:       Sudoku
   build-depends:       base
-                     , Sudoku
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
 test-suite test2
   type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
+  hs-source-dirs:      src test
   main-is:             "Test 2 - Simple.hs"
+  other-modules:       Sudoku
   build-depends:       base
-                     , Sudoku
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
 test-suite test3
   type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
+  hs-source-dirs:      src test
   main-is:             "Test 3 - Not solvable.hs"
+  other-modules:       Sudoku
   build-depends:       base
-                     , Sudoku
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
 test-suite test4
   type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
+  hs-source-dirs:      src test
   main-is:             "Test 4 - Hard puzzle.hs"
+  other-modules:       Sudoku
   build-depends:       base
-                     , Sudoku
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

@@ -14,7 +14,8 @@ import System.Exit(exitFailure, exitSuccess)
 data SudokuPuzzle = GenPuzzle (Int, Int) SudokuBoard deriving Eq
 data SudokuBoard  = GenBoard [Int] deriving Eq
 
-defaultFormat = [] :: [String]
+defaultFormat :: [String]
+defaultFormat = []
 
 test :: SudokuPuzzle -> [SudokuPuzzle] -> IO ()
 test testPuzzle correctSolution = putStr (show testPuzzle) >> (putStr . showSolution) testSolution >> isPassed where
@@ -66,21 +67,22 @@ isLevelTwoUpdatable :: SudokuPuzzle -> Bool
 isLevelTwoUpdatable puzzle = (length . getLevelTwoUnitConstrains) puzzle > 0
 
 filterTrivialConstrains :: [(Int, [Int])] -> [(Int, Int)]
-filterTrivialConstrains constrains = ((map ( \ (n, i:is) -> (n,i) )) . (filter (\val -> (length . snd) val == 1))) constrains
+filterTrivialConstrains constrains = ((map ( \ (n, i:_) -> (n,i) )) . (filter (\val -> (length . snd) val == 1))) constrains
 
 derivePuzzles :: SudokuPuzzle -> (Int, [Int]) -> [SudokuPuzzle]
 derivePuzzles puzzle constrain = ((map (updatePuzzle puzzle)) . (map (\ i -> [((fst constrain), i)]))) (snd constrain)
 
-getPuzzleBoard :: SudokuPuzzle -> SudokuBoard
-getPuzzleBoard (GenPuzzle _ board) = board
+-- getPuzzleBoard :: SudokuPuzzle -> SudokuBoard
+-- getPuzzleBoard (GenPuzzle _ board) = board
+
 getPuzzleBoardAsListOfInts :: SudokuPuzzle -> [Int]
 getPuzzleBoardAsListOfInts (GenPuzzle _ (GenBoard board)) = board
 
 getPuzzleDimX :: SudokuPuzzle -> Int
 getPuzzleDimY :: SudokuPuzzle -> Int
 getPuzzleSize :: SudokuPuzzle -> Int
-getPuzzleDimX (GenPuzzle (x, y) _) = x
-getPuzzleDimY (GenPuzzle (x, y) _) = y
+getPuzzleDimX (GenPuzzle (x, _) _) = x
+getPuzzleDimY (GenPuzzle (_, y) _) = y
 getPuzzleSize (GenPuzzle (x, y) _) = x * y
 
 getPuzzleRowIndicies  :: SudokuPuzzle -> Int -> [Int]
@@ -96,6 +98,7 @@ getPuzzleRow  puzzle rowNum  = (map ((getPuzzleBoardAsListOfInts puzzle) !!)) (g
 getPuzzleCol  puzzle colNum  = (map ((getPuzzleBoardAsListOfInts puzzle) !!)) (getPuzzleColIndicies  puzzle colNum)
 getPuzzleRect puzzle rectNum = (map ((getPuzzleBoardAsListOfInts puzzle) !!)) (getPuzzleRectIndicies puzzle rectNum)
 
+getIndexOfElementInRectangle :: Int -> Int -> Int -> Int -> Int
 getIndexOfElementInRectangle x y rectNum rectElement = rowNum * size + colNum
   where
     size   = x * y
@@ -109,7 +112,7 @@ buildPuzzleFromFormatedString dimensions square = GenPuzzle (x, y) board
     board = (GenBoard . map readCell . words) square
 
 buildFormatedStringFromPuzzle :: SudokuPuzzle -> [String] -> String
-buildFormatedStringFromPuzzle puzzle format = dimensions ++ "\n" ++ square
+buildFormatedStringFromPuzzle puzzle _ = dimensions ++ "\n" ++ square
   where
     x = getPuzzleDimX puzzle
     y = getPuzzleDimY puzzle
@@ -157,7 +160,7 @@ updatePuzzle :: SudokuPuzzle -> [(Int, Int)] -> SudokuPuzzle
 updatePuzzle oldPuzzle theUpdates = GenPuzzle (getPuzzleDimX oldPuzzle, getPuzzleDimY oldPuzzle) (GenBoard newBoard)
   where
     newBoard = merge (getPuzzleBoardAsListOfInts oldPuzzle) theUpdates 0
-    size = getPuzzleSize oldPuzzle
+    --size = getPuzzleSize oldPuzzle
     merge :: [Int] -> [(Int, Int)] -> Int -> [Int]
     merge oldlist [] _ = oldlist
     merge oldlist (update:updates) shift = concat [take ((fst update) - shift) oldlist, [snd update], merge (drop ((fst update) + 1 - shift) oldlist) updates ((fst update) + 1)]
