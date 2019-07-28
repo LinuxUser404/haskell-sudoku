@@ -1,0 +1,75 @@
+name:                sudoku
+version:             0.1.0.0
+synopsis:            Fast arbitrary size Sudoku puzzle solver and generator library
+-- description:
+license:             BSD3
+license-file:        LICENSE
+author:              Nick Pershyn
+maintainer:          nikolay.pershyn@gmail.com
+-- copyright:
+-- category:
+build-type:          Simple
+extra-source-files:  ChangeLog.md, README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Sudoku
+  -- other-modules:       Module
+  build-depends:       base >= 4 && < 5
+--  ghc-options:         -Wall
+  default-language:    Haskell2010
+
+executable sudoku-solver
+  hs-source-dirs:      src
+  main-is:             sudoku-solver.hs
+  -- ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , sudoku
+  default-language:    Haskell2010
+
+test-suite test1
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             "Test 1 - Solved puzzle.hs"
+  build-depends:       base
+                     , sudoku
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+test-suite test2
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             "Test 2 - Simple.hs"
+  build-depends:       base
+                     , sudoku
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+test-suite test3
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             "Test 3 - Not solvable.hs"
+  build-depends:       base
+                     , sudoku
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+test-suite test4
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             "Test 4 - Hard puzzle.hs"
+  build-depends:       base
+                     , sudoku
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+-- Waiting for detailed-1.0 availability in cabal
+-- test-suite sudoku-test
+--   type:                detailed-1.0
+--   hs-source-dirs:      test
+--   test-module:         Spec
+--   build-depends:       base
+--                      , sudoku
+--   --  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+--   default-language:    Haskell2010
