@@ -1,7 +1,7 @@
 -- Copyright (c) 2016, Mykola Pershyn
 module Main where
 
-import System.IO
+--import System.IO
 import Data.List
 -- TODO: Client/Server
 -- import Network.HTTP.Client.Request
