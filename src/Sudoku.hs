@@ -1,8 +1,4 @@
-{-
-Author: Nick(Mykola) Pershyn
-Language: Haskell
-Program: Sudoku Solver
--}
+-- Copyright (c) 2016, Nick Pershyn
 
 module Sudoku
     ( doMyMagic

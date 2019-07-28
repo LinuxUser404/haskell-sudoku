@@ -1,3 +1,4 @@
+-- Copyright (c) 2016, Nick Pershyn
 module Main where
 
 import System.IO
