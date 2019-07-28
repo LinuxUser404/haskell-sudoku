@@ -1,4 +1,4 @@
--- Copyright (c) 2016, Nick Pershyn
+-- Copyright (c) 2016, Mykola Pershyn
 
 module Sudoku
     ( doMyMagic

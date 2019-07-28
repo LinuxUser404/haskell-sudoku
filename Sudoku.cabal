@@ -4,9 +4,9 @@ synopsis:            Fast arbitrary size Sudoku puzzle solver and generator libr
 -- description:
 license:             BSD3
 license-file:        LICENSE
-author:              Nick Pershyn
+author:              Mykola(aka Nick) Pershyn
 maintainer:          nikolay.pershyn@gmail.com
--- copyright:
+copyright:           Copyright (c) 2016, Mykola Pershyn
 -- category:
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
