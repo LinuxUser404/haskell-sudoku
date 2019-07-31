@@ -17,12 +17,12 @@ import System.Exit(exitFailure, exitSuccess)
 --myDot = liftM2 (.)
 
 data SudokuPuzzle = GenPuzzle Size SudokuBoard deriving Eq
-data SudokuBoard  = GenBoard [Int] deriving Eq
-type Candidate = (Int, Int) -- (pos, possibleValue)
-type Candidates = (Int, [Int]) -- (pos, possibleValues)
+data SudokuBoard  = GenBoard [Cell] deriving Eq
+type Candidate = (Int, Cell) -- (pos, possibleValue)
+type Candidates = (Int, [Cell]) -- (pos, possibleValues)
 type Size = (Int, Int)
 type Update = SudokuPuzzle -> SudokuPuzzle
---type Cell = [Int]
+type Cell = Int
 
 defaultFormat :: [String]
 defaultFormat = []
@@ -78,14 +78,14 @@ isLevelTwoUpdatable :: SudokuPuzzle -> Bool
 isLevelTwoUpdatable puzzle = (length . getLevelTwoUnitConstrains) puzzle > 0
 
 -- constrains :: [(position, possibleValues)]
-getSoleCandidates :: SudokuPuzzle -> [(Int, Int)]
+getSoleCandidates :: SudokuPuzzle -> [Candidate]
 getSoleCandidates = filterSoleCandidates . getCandidates where
-  filterSoleCandidates candidates = (map ( \ (n, i:_) -> (n,i) )) . filter ((==1) .length . snd) $ candidates
+  filterSoleCandidates candidates = map ( \ (n, i:_) -> (n,i) ) . filter ((==1) .length . snd) $ candidates
 
 derivePuzzles :: SudokuPuzzle -> Candidates -> [SudokuPuzzle]
 derivePuzzles puzzle (pos, vals) = map (flip updatePuzzle puzzle) . map (\ i -> [(pos, i)]) $ vals
 
-getCells :: SudokuPuzzle -> [Int]
+getCells :: SudokuPuzzle -> [Cell]
 getCells (GenPuzzle _ (GenBoard board)) = board
 
 getPuzzleDimX :: SudokuPuzzle -> Int
@@ -96,17 +96,17 @@ getPuzzleDimY (GenPuzzle (_, y) _) = y
 getPuzzleSize (GenPuzzle (x, y) _) = x * y
 
 getPuzzleRowIndicies  :: SudokuPuzzle -> Int -> [Int]
-getPuzzleRowIndicies   puzzle              rowID  = (map (\colID -> rowID * (getPuzzleSize puzzle) + colID)) [0..(getPuzzleSize puzzle)-1]
+getPuzzleRowIndicies   puzzle              rowID  = map (\colID -> rowID * (getPuzzleSize puzzle) + colID) $ [0..(getPuzzleSize puzzle)-1]
 getPuzzleColIndicies  :: SudokuPuzzle -> Int -> [Int]
-getPuzzleColIndicies   puzzle              colID  = (map (\rowID -> rowID * (getPuzzleSize puzzle) + colID)) [0..(getPuzzleSize puzzle)-1]
+getPuzzleColIndicies   puzzle              colID  = map (\rowID -> rowID * (getPuzzleSize puzzle) + colID) $ [0..(getPuzzleSize puzzle)-1]
 getPuzzleRectIndicies :: SudokuPuzzle -> Int -> [Int]
-getPuzzleRectIndicies (GenPuzzle (x, y) _) rectID = (map (\rectElement -> (getIndexOfElementInRectangle x y rectID rectElement))) [0..x*y-1]
-getPuzzleRow          :: SudokuPuzzle -> Int -> [Int]
-getPuzzleRow  puzzle rowID  = (map ((getCells puzzle) !!)) (getPuzzleRowIndicies  puzzle rowID)
-getPuzzleCol          :: SudokuPuzzle -> Int -> [Int]
-getPuzzleCol  puzzle colID  = (map ((getCells puzzle) !!)) (getPuzzleColIndicies  puzzle colID)
-getPuzzleRect         :: SudokuPuzzle -> Int -> [Int]
-getPuzzleRect puzzle rectID = (map ((getCells puzzle) !!)) (getPuzzleRectIndicies puzzle rectID)
+getPuzzleRectIndicies (GenPuzzle (x, y) _) rectID = map (\rectElement -> getIndexOfElementInRectangle x y rectID rectElement) $ [0..x*y-1]
+getPuzzleRow          :: SudokuPuzzle -> Int -> [Cell]
+getPuzzleRow  puzzle rowID  = map (getCells puzzle !!) $ getPuzzleRowIndicies  puzzle rowID
+getPuzzleCol          :: SudokuPuzzle -> Int -> [Cell]
+getPuzzleCol  puzzle colID  = map (getCells puzzle !!) $ getPuzzleColIndicies  puzzle colID
+getPuzzleRect         :: SudokuPuzzle -> Int -> [Cell]
+getPuzzleRect puzzle rectID = map (getCells puzzle !!) $ getPuzzleRectIndicies puzzle rectID
 
 getIndexOfElementInRectangle :: Int -> Int -> Int -> Int -> Int
 getIndexOfElementInRectangle x y rectNum rectElement = rowNum * size + colNum
@@ -128,7 +128,7 @@ buildFormatedStringFromPuzzle puzzle _ = dimensions ++ "\n" ++ square
     y = getPuzzleDimY puzzle
     size = x * y
     dimensions = show x ++ " " ++ show y
-    square = (unlines . map ((intercalate " ") . (map intToString) . (getPuzzleRow puzzle))) [0 .. size - 1]
+    square = unlines . map (intercalate " " . map showCell . getPuzzleRow puzzle) $ [0 .. size - 1]
 
 cellIDToRowID :: Int -> SudokuPuzzle -> Int
 cellIDToRowID cellID puzzle = cellID `quot` n where
@@ -151,9 +151,9 @@ getCandidate :: SudokuPuzzle -> Int -> Candidates
 getCandidate puzzle cellID = (cellID, [1..(getPuzzleSize puzzle)] \\ presentValues)
   where
     presentValues = [] `union` set1 `union` set2 `union` set3
-    set1 = getPuzzleRow  puzzle (cellIDToRowID  cellID puzzle)
-    set2 = getPuzzleCol  puzzle (cellIDToColID  cellID puzzle)
-    set3 = getPuzzleRect puzzle (cellIDToRectID cellID puzzle)
+    set1 = getPuzzleRow  puzzle $ cellIDToRowID  cellID puzzle
+    set2 = getPuzzleCol  puzzle $ cellIDToColID  cellID puzzle
+    set3 = getPuzzleRect puzzle $ cellIDToRectID cellID puzzle
 
 -- Get candidates for all cells that are not filled yet
 getCandidates :: SudokuPuzzle -> [Candidates]
@@ -167,16 +167,18 @@ getCandidates puzzle = map (getCandidate puzzle) candidateCellIds
 
 -- for each row/col/rect checks whether a specific value can be assigned only to one cell in a unit
 getLevelTwoUnitConstrains :: SudokuPuzzle -> [Candidate]
-getLevelTwoUnitConstrains puzzle = sort ([] `union` (concat . (map myVal)) [1..size])
+getLevelTwoUnitConstrains puzzle = sort . union [] . concat . (map myVal) $ [1..size]
   where
-    constr indexFunction testVal = filter (\(_,values) -> testVal `elem` values) . map (getCandidate puzzle) . filterUnknows . indexFunction puzzle
+    constr indexFunction testVal = filter (elem testVal . snd) . map (getCandidate puzzle) . filterUnknows . indexFunction puzzle
+    cells = getCells puzzle
     filterUnknows :: [Int] -> [Int]
-    filterUnknows = filter (\val -> ((getCells puzzle) !! val) == 0)
+    filterUnknows = filter $ (==0) . (!!) cells
     fullConstr :: Int -> [[(Int, [Int])]]
-    fullConstr testVal = concat [map (constr getPuzzleRowIndicies testVal) [0..size - 1], map (constr getPuzzleColIndicies testVal) [0..size - 1], map (constr getPuzzleRectIndicies testVal) [0..size - 1]]
-    filterUnique = filter (\val -> length(val) == 1)
+    myF = \testVal indices -> map (constr indices testVal) [0..size - 1]
+    fullConstr testVal = concat . map (myF testVal) $ [getPuzzleRowIndicies, getPuzzleColIndicies, getPuzzleRectIndicies]
+    filterUnique = filter $ (==1) . length
     myVal :: Int -> [(Int, Int)]
-    myVal testVal = ( (map (\ x -> ((fst . head) x, testVal)) ). filterUnique) (fullConstr testVal)
+    myVal testVal = map (flip (,) testVal . fst . head) . filterUnique . fullConstr $ testVal
     size = getPuzzleSize puzzle
 
 updatePuzzle :: [Candidate] -> Update
@@ -185,12 +187,12 @@ updatePuzzle theUpdates = foldl1 (.) $ map updateWith theUpdates where
     newBoard = left ++ (val:right)
     (left, (0:right)) = splitAt pos oldBoard -- the update shouldn't happen on a filled cell
 
-readCell :: String -> Int
+readCell :: String -> Cell
 readCell s
   | s == "_"    = 0
-  | otherwise   = read s :: Int
+  | otherwise   = read s :: Cell
 
-intToString :: Int -> String
-intToString s
+showCell :: Cell -> String
+showCell s
   | s == 0    = "_"
   | otherwise   = show s
