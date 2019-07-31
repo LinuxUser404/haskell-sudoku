@@ -1,7 +1,6 @@
 -- Copyright (c) 2016, Mykola Pershyn
-
 module Sudoku
-    ( doMyMagic
+    ( readPuzzle
     , SudokuPuzzle(..)
     , SudokuBoard(..)
     , solve
@@ -11,6 +10,9 @@ module Sudoku
 import Data.List
 --import Data.Bits
 import System.Exit(exitFailure, exitSuccess)
+
+-- TODO: use arrays instead? bit?
+-- import Data.Array
 
 -- Utility functions
 --myDot a b c = a c . b c
@@ -24,9 +26,6 @@ type Size = (Int, Int)
 type Update = SudokuPuzzle -> SudokuPuzzle
 type Cell = Int
 
-defaultFormat :: [String]
-defaultFormat = []
-
 test :: SudokuPuzzle -> [SudokuPuzzle] -> IO ()
 test testPuzzle correctSolution = putStr (show testPuzzle) >> (putStr . showSolution) testSolution >> isPassed where
   testSolution = solve testPuzzle
@@ -35,14 +34,10 @@ test testPuzzle correctSolution = putStr (show testPuzzle) >> (putStr . showSolu
   showSolution xs = (show $ length xs) ++ " solutions found\n"
   isPassed  = if correctSolution /= testSolution then exitFailure else exitSuccess
 
-
-doMyMagic :: String -> String -> [String]
-doMyMagic dimmensions square = ((map (\i -> (buildFormatedStringFromPuzzle i defaultFormat))) . solve . buildPuzzleFromFormatedString dimmensions) square
-
 instance Show SudokuPuzzle where
-  show (GenPuzzle (x, y) (GenBoard board)) = unlines $ (unwords (map show [x, y])) : (map unwords . format . map show $ board) where
-    format [] = []
-    format b = (take (x * y) b) : (format $ drop (x * y) b)
+  show (GenPuzzle (x, y) (GenBoard board)) = unlines $ (unwords (map show [x, y])) : (map unwords . toRows . map showCell $ board) where
+    toRows [] = []
+    toRows b = (take (x * y) b) : (toRows $ drop (x * y) b)
 
 solve :: SudokuPuzzle -> [SudokuPuzzle]
 solve puzzle
@@ -51,21 +46,17 @@ solve puzzle
   | isSolvable puzzle == False   = []       -- solves test3
   | (hasSoleCandidates   puzzle) = solve . (flip updatePuzzle puzzle) . getSoleCandidates         $ puzzle -- solves test2
   | (isLevelTwoUpdatable puzzle) = solve . (flip updatePuzzle puzzle) . getLevelTwoUnitConstrains $ puzzle -- still not enough for test4
-  | otherwise                  = concat . map solve . derivePuzzles puzzle . head . getCandidates $ puzzle  -- solves slowly(test4)
+  | otherwise                  = concat . map solve . derivePuzzles puzzle . head . getCandidates $ puzzle -- solves slowly(test4)
     where
       hasSoleCandidates = (>0) . length . getSoleCandidates
 
+-- checks for duplicates that are > 0
 isValid :: SudokuPuzzle -> Bool
-isValid puzzle
-  | check getPuzzleRow  = False
-  | check getPuzzleCol  = False
-  | check getPuzzleRect = False
-  | otherwise = True
-    where
-      values = [1 .. n]
-      setIDs = [0 .. n - 1]
-      n = getPuzzleSize puzzle
-      check getSet = any (==True) . map (\i -> any(>0) $ (getSet puzzle i) \\ values) $ setIDs
+isValid puzzle = all (==False) . map check $ [getPuzzleRow, getPuzzleCol, getPuzzleRect] where
+  values = [1 .. n]
+  setIDs = [0 .. n - 1]
+  n = getPuzzleSize puzzle
+  check getSet = any (==True) . map (any (>0) . (\\ values) . getSet puzzle) $ setIDs
 
 isFilled :: SudokuPuzzle -> Bool
 isFilled puzzle = all (>0) . getCells $ puzzle
@@ -115,20 +106,11 @@ getIndexOfElementInRectangle x y rectNum rectElement = rowNum * size + colNum
     rowNum = rectNum `quot` y * y + rectElement `quot` x
     colNum = rectNum `rem`  y * x + rectElement `rem`  x
 
-buildPuzzleFromFormatedString :: String -> String -> SudokuPuzzle
-buildPuzzleFromFormatedString dimensions square = GenPuzzle (x, y) board
+readPuzzle :: String -> String -> SudokuPuzzle
+readPuzzle dimensions square = GenPuzzle (x, y) board
   where
     [x, y] = map read . words $ dimensions
     board = (GenBoard . map readCell . words) square
-
-buildFormatedStringFromPuzzle :: SudokuPuzzle -> [String] -> String
-buildFormatedStringFromPuzzle puzzle _ = dimensions ++ "\n" ++ square
-  where
-    x = getPuzzleDimX puzzle
-    y = getPuzzleDimY puzzle
-    size = x * y
-    dimensions = show x ++ " " ++ show y
-    square = unlines . map (intercalate " " . map showCell . getPuzzleRow puzzle) $ [0 .. size - 1]
 
 cellIDToRowID :: Int -> SudokuPuzzle -> Int
 cellIDToRowID cellID puzzle = cellID `quot` n where
