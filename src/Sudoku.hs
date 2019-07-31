@@ -5,6 +5,9 @@ module Sudoku
     , SudokuBoard(..)
     , solve
     , test
+    , getPuzzleRow
+    , getPuzzleCol
+    , getPuzzleRect
     ) where
 
 import Data.List

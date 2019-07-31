@@ -24,8 +24,8 @@ executable sudoku-solver
   hs-source-dirs:      src
   main-is:             sudoku-solver.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  other-modules:       Sudoku
   build-depends:       base
+                     , sudoku
   default-language:    Haskell2010
 
 test-suite test1
@@ -34,6 +34,7 @@ test-suite test1
   main-is:             "Test 1 - Solved puzzle.hs"
   other-modules:       Sudoku
   build-depends:       base
+                     , sudoku
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
@@ -43,6 +44,7 @@ test-suite test2
   main-is:             "Test 2 - Simple.hs"
   other-modules:       Sudoku
   build-depends:       base
+                     , sudoku
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
@@ -52,6 +54,7 @@ test-suite test3
   main-is:             "Test 3 - Not solvable.hs"
   other-modules:       Sudoku
   build-depends:       base
+                     , sudoku
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
@@ -61,6 +64,16 @@ test-suite test4
   main-is:             "Test 4 - Hard puzzle.hs"
   other-modules:       Sudoku
   build-depends:       base
+                     , sudoku
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+test-suite test5
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             "Test 5 - IO and format.hs"
+  build-depends:       base
+                     , sudoku
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
