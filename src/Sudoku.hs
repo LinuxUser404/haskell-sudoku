@@ -18,8 +18,8 @@ import System.Exit(exitFailure, exitSuccess)
 
 data SudokuPuzzle = GenPuzzle Size SudokuBoard deriving Eq
 data SudokuBoard  = GenBoard [Int] deriving Eq
---data Candidate = OneOf [Int]
-type Candidate = (Int, [Int]) -- (pos, possibleValues)
+type Candidate = (Int, Int) -- (pos, possibleValue)
+type Candidates = (Int, [Int]) -- (pos, possibleValues)
 type Size = (Int, Int)
 type Update = SudokuPuzzle -> SudokuPuzzle
 --type Cell = [Int]
@@ -79,11 +79,11 @@ isLevelTwoUpdatable puzzle = (length . getLevelTwoUnitConstrains) puzzle > 0
 
 -- constrains :: [(position, possibleValues)]
 getSoleCandidates :: SudokuPuzzle -> [(Int, Int)]
-getSoleCandidates = getSoleCandidates' . getCandidates where
-  getSoleCandidates' constrains = (map ( \ (n, i:_) -> (n,i) )) . filter ((==1) .length . snd) $ constrains
+getSoleCandidates = filterSoleCandidates . getCandidates where
+  filterSoleCandidates candidates = (map ( \ (n, i:_) -> (n,i) )) . filter ((==1) .length . snd) $ candidates
 
-derivePuzzles :: SudokuPuzzle -> (Int, [Int]) -> [SudokuPuzzle]
-derivePuzzles puzzle constrain = ((map (flip updatePuzzle puzzle)) . (map (\ i -> [((fst constrain), i)]))) (snd constrain)
+derivePuzzles :: SudokuPuzzle -> Candidates -> [SudokuPuzzle]
+derivePuzzles puzzle (pos, vals) = map (flip updatePuzzle puzzle) . map (\ i -> [(pos, i)]) $ vals
 
 getCells :: SudokuPuzzle -> [Int]
 getCells (GenPuzzle _ (GenBoard board)) = board
@@ -146,20 +146,17 @@ cellIDToRectID cellID puzzle = rowID `quot` y * y + colID `quot` x where
   rowID = cellIDToRowID cellID puzzle
   colID = cellIDToColID cellID puzzle
 
--- Sole Candidate Strategy - values that are not persent in the same row/col/rect
--- returns a list of possible values for specific cell, so each of those values do not contradict with any of know values
-getCandidate :: SudokuPuzzle -> Int -> Candidate
-getCandidate puzzle elementNumber
-  | getCells puzzle !! elementNumber > 0 = (elementNumber, [])
-  | otherwise                                              = (elementNumber, [1..(getPuzzleSize puzzle)] \\ presentValues)
+-- returns a list of possible values for a specific cell, so each of those values do not contradict with any of the know values
+getCandidate :: SudokuPuzzle -> Int -> Candidates
+getCandidate puzzle cellID = (cellID, [1..(getPuzzleSize puzzle)] \\ presentValues)
   where
     presentValues = [] `union` set1 `union` set2 `union` set3
-    set1 = getPuzzleRow  puzzle (cellIDToRowID elementNumber puzzle)
-    set2 = getPuzzleCol  puzzle (cellIDToColID elementNumber puzzle)
-    set3 = getPuzzleRect puzzle (cellIDToRectID elementNumber puzzle)
+    set1 = getPuzzleRow  puzzle (cellIDToRowID  cellID puzzle)
+    set2 = getPuzzleCol  puzzle (cellIDToColID  cellID puzzle)
+    set3 = getPuzzleRect puzzle (cellIDToRectID cellID puzzle)
 
 -- Get candidates for all cells that are not filled yet
-getCandidates :: SudokuPuzzle -> [Candidate]
+getCandidates :: SudokuPuzzle -> [Candidates]
 getCandidates puzzle = map (getCandidate puzzle) candidateCellIds
   where
     size = getPuzzleSize puzzle
@@ -169,7 +166,7 @@ getCandidates puzzle = map (getCandidate puzzle) candidateCellIds
 
 
 -- for each row/col/rect checks whether a specific value can be assigned only to one cell in a unit
-getLevelTwoUnitConstrains :: SudokuPuzzle -> [(Int, Int)]
+getLevelTwoUnitConstrains :: SudokuPuzzle -> [Candidate]
 getLevelTwoUnitConstrains puzzle = sort ([] `union` (concat . (map myVal)) [1..size])
   where
     constr indexFunction testVal = filter (\(_,values) -> testVal `elem` values) . map (getCandidate puzzle) . filterUnknows . indexFunction puzzle
@@ -182,11 +179,11 @@ getLevelTwoUnitConstrains puzzle = sort ([] `union` (concat . (map myVal)) [1..s
     myVal testVal = ( (map (\ x -> ((fst . head) x, testVal)) ). filterUnique) (fullConstr testVal)
     size = getPuzzleSize puzzle
 
-updatePuzzle :: [(Int, Int)] -> Update
+updatePuzzle :: [Candidate] -> Update
 updatePuzzle theUpdates = foldl1 (.) $ map updateWith theUpdates where
   updateWith (pos, val) (GenPuzzle size (GenBoard oldBoard)) = GenPuzzle size (GenBoard newBoard) where
     newBoard = left ++ (val:right)
-    (left, (_:right)) = splitAt pos oldBoard
+    (left, (0:right)) = splitAt pos oldBoard -- the update shouldn't happen on a filled cell
 
 readCell :: String -> Int
 readCell s
