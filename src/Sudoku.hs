@@ -57,13 +57,12 @@ solve puzzle
       hasSoleCandidates = not . null . getSoleCandidates
       hasUniqueCandidates = not . null . getUniqueCandidates
 
--- checks for duplicates that are > 0
+-- checks for duplicates in a partially filled sudoku
 isValid :: SudokuPuzzle -> Bool
-isValid puzzle = all (==False) . map check $ map getSet [Row, Col, Rect] where
-  values = [1 .. n]
+isValid puzzle = all (all (==0) . (\\ [1 .. n])) sets  where
+  sets = concatMap (\s -> map (getSet s puzzle) setIDs) [Row, Col, Rect]
   setIDs = [0 .. n - 1]
   n = getPuzzleSize puzzle
-  check getSet' = any (any (>0) . (\\ values) . getSet' puzzle) setIDs
 
 isFilled :: SudokuPuzzle -> Bool
 isFilled = all (>0) . getCells
