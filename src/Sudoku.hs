@@ -5,9 +5,8 @@ module Sudoku
     , SudokuBoard(..)
     , solve
     , test
-    , getPuzzleRow
-    , getPuzzleCol
-    , getPuzzleRect
+    , getSet
+    , SetType(..)
     ) where
 
 import Data.List
@@ -28,14 +27,17 @@ type Candidates = (Int, [Cell]) -- (pos, possibleValues)
 type Size = (Int, Int)
 type Update = SudokuPuzzle -> SudokuPuzzle
 type Cell = Int
+--type CandidateSet = [Candidates] -- a set of candidates within a single row/col/rect
+data SetType = Row | Col | Rect
 
 test :: SudokuPuzzle -> [SudokuPuzzle] -> IO ()
-test testPuzzle correctSolution = putStr (show testPuzzle) >> (putStr . showSolution) testSolution >> isPassed where
+test testPuzzle correctSolution = if correctSolution == testSolution then passed else failed where
+  passed = exitSuccess
+  failed = putStr (show testPuzzle) >> (putStr . showSolution) testSolution >> exitFailure
   testSolution = solve testPuzzle
   showSolution [] = "No solutions\n"
   showSolution [x] = show x
-  showSolution xs = (show $ length xs) ++ " solutions found\n"
-  isPassed  = if correctSolution /= testSolution then exitFailure else exitSuccess
+  showSolution xs = (show $ length xs) ++ " solutions found, expected: " ++ show (length correctSolution)
 
 instance Show SudokuPuzzle where
   show (GenPuzzle (x, y) (GenBoard board)) = unlines $ (unwords (map show [x, y])) : (map unwords . toRows . map showCell $ board) where
@@ -55,15 +57,16 @@ solve puzzle
 
 -- checks for duplicates that are > 0
 isValid :: SudokuPuzzle -> Bool
-isValid puzzle = all (==False) . map check $ [getPuzzleRow, getPuzzleCol, getPuzzleRect] where
+isValid puzzle = all (==False) . map check $ map getSet [Row, Col, Rect] where
   values = [1 .. n]
   setIDs = [0 .. n - 1]
   n = getPuzzleSize puzzle
-  check getSet = any (==True) . map (any (>0) . (\\ values) . getSet puzzle) $ setIDs
+  check getSet' = any (==True) . map (any (>0) . (\\ values) . getSet' puzzle) $ setIDs
 
 isFilled :: SudokuPuzzle -> Bool
 isFilled puzzle = all (>0) . getCells $ puzzle
 
+-- every empty cell should have a candidate
 isSolvable :: SudokuPuzzle -> Bool
 isSolvable puzzle = filter (\val -> snd val == []) (getCandidates puzzle) == []
 
@@ -71,7 +74,6 @@ isSolvable puzzle = filter (\val -> snd val == []) (getCandidates puzzle) == []
 hasUniqueCandidates :: SudokuPuzzle -> Bool
 hasUniqueCandidates puzzle = (length . getUniqueCandidates) puzzle > 0
 
--- constrains :: [(position, possibleValues)]
 getSoleCandidates :: SudokuPuzzle -> [Candidate]
 getSoleCandidates = filterSoleCandidates . getCandidates where
   filterSoleCandidates candidates = map ( \ (n, i:_) -> (n,i) ) . filter ((==1) .length . snd) $ candidates
@@ -89,18 +91,13 @@ getPuzzleDimX (GenPuzzle (x, _) _) = x
 getPuzzleDimY (GenPuzzle (_, y) _) = y
 getPuzzleSize (GenPuzzle (x, y) _) = x * y
 
-getPuzzleRowIndicies  :: SudokuPuzzle -> Int -> [Int]
-getPuzzleRowIndicies   puzzle              rowID  = map (\colID -> rowID * (getPuzzleSize puzzle) + colID) $ [0..(getPuzzleSize puzzle)-1]
-getPuzzleColIndicies  :: SudokuPuzzle -> Int -> [Int]
-getPuzzleColIndicies   puzzle              colID  = map (\rowID -> rowID * (getPuzzleSize puzzle) + colID) $ [0..(getPuzzleSize puzzle)-1]
-getPuzzleRectIndicies :: SudokuPuzzle -> Int -> [Int]
-getPuzzleRectIndicies (GenPuzzle (x, y) _) rectID = map (\rectElement -> getIndexOfElementInRectangle x y rectID rectElement) $ [0..x*y-1]
-getPuzzleRow          :: SudokuPuzzle -> Int -> [Cell]
-getPuzzleRow  puzzle rowID  = map (getCells puzzle !!) $ getPuzzleRowIndicies  puzzle rowID
-getPuzzleCol          :: SudokuPuzzle -> Int -> [Cell]
-getPuzzleCol  puzzle colID  = map (getCells puzzle !!) $ getPuzzleColIndicies  puzzle colID
-getPuzzleRect         :: SudokuPuzzle -> Int -> [Cell]
-getPuzzleRect puzzle rectID = map (getCells puzzle !!) $ getPuzzleRectIndicies puzzle rectID
+getSetIndicies :: SetType -> SudokuPuzzle -> Int -> [Int]
+getSetIndicies Row   puzzle              rowID  = map (\colID -> rowID * (getPuzzleSize puzzle) + colID) $ [0..(getPuzzleSize puzzle)-1]
+getSetIndicies Col   puzzle              colID  = map (\rowID -> rowID * (getPuzzleSize puzzle) + colID) $ [0..(getPuzzleSize puzzle)-1]
+getSetIndicies Rect (GenPuzzle (x, y) _) rectID = map (\rectElement -> getIndexOfElementInRectangle x y rectID rectElement) $ [0..x*y-1]
+
+getSet :: SetType -> SudokuPuzzle -> Int -> [Cell]
+getSet s puzzle setID = map (getCells puzzle !!) $ getSetIndicies s puzzle setID
 
 getIndexOfElementInRectangle :: Int -> Int -> Int -> Int -> Int
 getIndexOfElementInRectangle x y rectNum rectElement = rowNum * size + colNum
@@ -115,30 +112,22 @@ readPuzzle dimensions square = GenPuzzle (x, y) board
     [x, y] = map read . words $ dimensions
     board = (GenBoard . map readCell . words) square
 
-cellIDToRowID :: Int -> SudokuPuzzle -> Int
-cellIDToRowID cellID puzzle = cellID `quot` n where
-  n = getPuzzleSize puzzle
-
---
-cellIDToColID :: Int -> SudokuPuzzle -> Int
-cellIDToColID cellID puzzle = cellID `rem` n where
-  n = getPuzzleSize puzzle
---
-cellIDToRectID :: Int -> SudokuPuzzle -> Int
-cellIDToRectID cellID puzzle = rowID `quot` y * y + colID `quot` x where
-  x = getPuzzleDimX puzzle
-  y = getPuzzleDimY puzzle
-  rowID = cellIDToRowID cellID puzzle
-  colID = cellIDToColID cellID puzzle
+cellIDToSetID :: SetType -> Int -> SudokuPuzzle -> Int
+cellIDToSetID Row  cellID puzzle = cellID `quot` (getPuzzleSize puzzle)
+cellIDToSetID Col  cellID puzzle = cellID `rem`  (getPuzzleSize puzzle)
+cellIDToSetID Rect cellID puzzle = rowID `quot` y * y + colID `quot` x
+  where
+    x = getPuzzleDimX puzzle
+    y = getPuzzleDimY puzzle
+    rowID = cellIDToSetID Row cellID puzzle
+    colID = cellIDToSetID Col cellID puzzle
 
 -- returns a list of possible values for a specific cell, so each of those values do not contradict with any of the know values
 getCandidate :: SudokuPuzzle -> Int -> Candidates
 getCandidate puzzle cellID = (cellID, [1..(getPuzzleSize puzzle)] \\ presentValues)
   where
     presentValues = [] `union` set1 `union` set2 `union` set3
-    set1 = getPuzzleRow  puzzle $ cellIDToRowID  cellID puzzle
-    set2 = getPuzzleCol  puzzle $ cellIDToColID  cellID puzzle
-    set3 = getPuzzleRect puzzle $ cellIDToRectID cellID puzzle
+    [set1, set2, set3] = map(\s -> getSet s  puzzle $ cellIDToSetID s cellID puzzle) [Row, Col, Rect]
 
 -- Get candidates for all cells that are not filled yet
 getCandidates :: SudokuPuzzle -> [Candidates]
@@ -149,18 +138,17 @@ getCandidates puzzle = map (getCandidate puzzle) candidateCellIds
     candidateCellIds = filter (\val -> (cells !! val) == 0) cellIDs
     cellIDs = [0..size*size - 1]
 
-
 -- for each row/col/rect checks whether a specific value can be assigned only to one cell in a unit
 getUniqueCandidates :: SudokuPuzzle -> [Candidate]
 getUniqueCandidates puzzle = sort . union [] . concat . (map myVal) $ [1..size]
   where
     -- get indecies of a set, peek empty, get candidates for them, peek candidates with testVal
     -- in other words get candidates for a given set with testVal in them.
-    constr indexFunction testVal = filter (elem testVal . snd) . map (getCandidate puzzle) . filterUnknows . indexFunction puzzle
+    constr indexSet testVal = filter (elem testVal . snd) . map (getCandidate puzzle) . filterUnknows . indexSet
     cells = getCells puzzle
     filterUnknows = filter $ (==0) . (!!) cells -- filter indecies of unknown cells
     fullConstr :: Int -> [[(Int, [Int])]] -- for each set get candidates with testVal
-    fullConstr testVal = concat . map (myF testVal) $ [getPuzzleRowIndicies, getPuzzleColIndicies, getPuzzleRectIndicies]
+    fullConstr testVal = concat . map (myF testVal) $ [getSetIndicies Row  puzzle, getSetIndicies Col puzzle, getSetIndicies Rect puzzle]
     myF testVal indices = map (constr indices testVal) [0..size - 1] -- get candidates with val for each set.
     filterUnique = filter $ (==1) . length
     myVal :: Int -> [(Int, Int)] -- for each value get unique candidates
