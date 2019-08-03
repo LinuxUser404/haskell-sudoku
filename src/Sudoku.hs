@@ -119,7 +119,7 @@ cellIDToSetID Rect cellID puzzle = rowID `quot` y * y + colID `quot` x
     rowID = cellIDToSetID Row cellID puzzle
     colID = cellIDToSetID Col cellID puzzle
 
--- returns a list of possible values for a specific cell, so each of those values do not contradict with any of the know values
+-- returns a list of possible values for a specific cell, so each of those values does not contradict with the knowns
 getCandidate :: SudokuPuzzle -> Int -> Candidates
 getCandidate puzzle cellID = (cellID, [1..(getPuzzleSize puzzle)] \\ presentValues)
   where
