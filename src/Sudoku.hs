@@ -47,8 +47,8 @@ solve puzzle
   | isValid    puzzle == False   = []       -- cuts invalid answers, test4 has a unique solution
   | isFilled   puzzle            = [puzzle] -- solves test1
   | isSolvable puzzle == False   = []       -- solves test3
-  | (hasSoleCandidates   puzzle) = solve . (flip updatePuzzle puzzle) . getSoleCandidates         $ puzzle -- solves test2
-  | (isLevelTwoUpdatable puzzle) = solve . (flip updatePuzzle puzzle) . getLevelTwoUnitConstrains $ puzzle -- still not enough for test4
+  | (hasSoleCandidates   puzzle) = solve . (flip updatePuzzle puzzle) . getSoleCandidates   $ puzzle -- solves test2
+  | (hasUniqueCandidates puzzle) = solve . (flip updatePuzzle puzzle) . getUniqueCandidates $ puzzle -- still not enough for test4
   | otherwise                  = concat . map solve . derivePuzzles puzzle . head . getCandidates $ puzzle -- solves slowly(test4)
     where
       hasSoleCandidates = (>0) . length . getSoleCandidates
@@ -68,8 +68,8 @@ isSolvable :: SudokuPuzzle -> Bool
 isSolvable puzzle = filter (\val -> snd val == []) (getCandidates puzzle) == []
 
 
-isLevelTwoUpdatable :: SudokuPuzzle -> Bool
-isLevelTwoUpdatable puzzle = (length . getLevelTwoUnitConstrains) puzzle > 0
+hasUniqueCandidates :: SudokuPuzzle -> Bool
+hasUniqueCandidates puzzle = (length . getUniqueCandidates) puzzle > 0
 
 -- constrains :: [(position, possibleValues)]
 getSoleCandidates :: SudokuPuzzle -> [Candidate]
@@ -151,18 +151,19 @@ getCandidates puzzle = map (getCandidate puzzle) candidateCellIds
 
 
 -- for each row/col/rect checks whether a specific value can be assigned only to one cell in a unit
-getLevelTwoUnitConstrains :: SudokuPuzzle -> [Candidate]
-getLevelTwoUnitConstrains puzzle = sort . union [] . concat . (map myVal) $ [1..size]
+getUniqueCandidates :: SudokuPuzzle -> [Candidate]
+getUniqueCandidates puzzle = sort . union [] . concat . (map myVal) $ [1..size]
   where
+    -- get indecies of a set, peek empty, get candidates for them, peek candidates with testVal
+    -- in other words get candidates for a given set with testVal in them.
     constr indexFunction testVal = filter (elem testVal . snd) . map (getCandidate puzzle) . filterUnknows . indexFunction puzzle
     cells = getCells puzzle
-    filterUnknows :: [Int] -> [Int]
-    filterUnknows = filter $ (==0) . (!!) cells
-    fullConstr :: Int -> [[(Int, [Int])]]
-    myF = \testVal indices -> map (constr indices testVal) [0..size - 1]
+    filterUnknows = filter $ (==0) . (!!) cells -- filter indecies of unknown cells
+    fullConstr :: Int -> [[(Int, [Int])]] -- for each set get candidates with testVal
     fullConstr testVal = concat . map (myF testVal) $ [getPuzzleRowIndicies, getPuzzleColIndicies, getPuzzleRectIndicies]
+    myF testVal indices = map (constr indices testVal) [0..size - 1] -- get candidates with val for each set.
     filterUnique = filter $ (==1) . length
-    myVal :: Int -> [(Int, Int)]
+    myVal :: Int -> [(Int, Int)] -- for each value get unique candidates
     myVal testVal = map (flip (,) testVal . fst . head) . filterUnique . fullConstr $ testVal
     size = getPuzzleSize puzzle
 
