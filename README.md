@@ -5,7 +5,6 @@
 To build the library and run the tests execute:
 
 ```
-cabal configure --enable-tests
-cabal build
-cabal test
+cabal v2-build
+cabal v2-test
 ```

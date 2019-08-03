@@ -1,0 +1,4 @@
+packages: ./sudoku.cabal
+profiling: False
+optimization: True
+tests: True
